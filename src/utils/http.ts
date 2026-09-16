@@ -1,12 +1,4 @@
-// ============================================================
-// HTTP CLIENT
-// Wrapper axios/fetch dùng chung toàn app
-// Thêm interceptor token, xử lý lỗi tập trung tại đây
-// ============================================================
-
-const BASE_URL = 'http://localhost:8081'; // TODO: chuyển sang biến môi trường (process.env.EXPO_PUBLIC_API_URL)
-
-// ── Generic request helper ─────────────────────────────────
+const BASE_URL = 'http://localhost:8000/civil';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -38,7 +30,6 @@ export async function request<T>(
   const data = await response.json();
 
   if (!response.ok) {
-    // Ném lỗi có cấu trúc để các service bắt được
     throw {
       code: data?.code ?? String(response.status),
       message: data?.message ?? 'Lỗi không xác định từ máy chủ.',

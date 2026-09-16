@@ -1,6 +1,6 @@
 {
   "extends": "expo/tsconfig.base",
-  "compilerOptions": {
+  "compilerOp tions": {
     "target": "esnext",
     "module": "esnext",
     "lib": ["esnext", "dom"],
