@@ -15,11 +15,12 @@ import { useNavigation } from '@react-navigation/native';
 import { logout, selectCurrentUser } from '../../store/auth/authSlice';
 import { Colors } from '../../theme/colors';
 import { Feather } from '@expo/vector-icons';
+import { AiAgentWidget } from '../../features/ai/components/AiAgentWidget';
 
 export type ModuleId =
   | 'overview' | 'admin-units' | 'citizens' | 'households'
   | 'residency' | 'dynamics' | 'special-groups'
-  | 'reports' | 'gis' | 'system';
+  | 'reports' | 'gis' | 'system' | 'payment' | 'sync';
 
 interface NavItem {
   id: ModuleId;
@@ -34,6 +35,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'citizens', icon: 'users', label: 'Quản lý công dân', group: 'Nghiệp vụ cốt lõi' },
   { id: 'households', icon: 'home', label: 'Hộ gia đình / Hộ khẩu', group: 'Nghiệp vụ cốt lõi' },
   { id: 'residency', icon: 'map-pin', label: 'Quản lý cư trú', group: 'Nghiệp vụ cốt lõi' },
+  { id: 'payment', icon: 'credit-card', label: 'Cổng nộp thuế (Kho bạc)', group: 'Nghiệp vụ cốt lõi' },
+  { id: 'sync', icon: 'refresh-cw', label: 'Đồng bộ Quốc gia (VNeID)', group: 'Phân tích & Hệ thống' },
   { id: 'dynamics', icon: 'trending-up', label: 'Biến động dân cư', group: 'Biến động & Đặc thù' },
   { id: 'special-groups', icon: 'heart', label: 'Đối tượng đặc thù', group: 'Biến động & Đặc thù' },
   { id: 'reports', icon: 'bar-chart-2', label: 'Thống kê - Báo cáo', group: 'Phân tích & Hệ thống' },
@@ -47,6 +50,8 @@ const MODULE_TITLES: Record<ModuleId, string> = {
   'citizens': 'Quản lý Công dân ',
   'households': 'Quản lý Hộ gia đình / Hộ khẩu',
   'residency': 'Quản lý Cư trú ',
+  'payment': 'Cổng Nộp Thuế & Ngân Sách Nhà Nước',
+  'sync': 'Trục Đồng Bộ CSDL Dân Cư Quốc Gia (VNeID)',
   'dynamics': 'Biến động dân cư ',
   'special-groups': 'Đối tượng đặc thù & Chính sách',
   'reports': 'Hệ thống Thống kê & Báo cáo',
@@ -130,6 +135,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ activeModule, childre
       case 'special-groups':
         navigation.navigate('SpecialGroups');
         break;
+      case 'payment':
+        navigation.navigate('Payment');
+        break;
+      case 'sync':
+        navigation.navigate('Sync');
+        break;
       case 'reports':
         navigation.navigate('Reports');
         break;
@@ -165,7 +176,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ activeModule, childre
             ]}
           >
             <TouchableOpacity
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
               activeOpacity={1}
               onPress={() => setSidebarOpen(false)}
             />
@@ -280,6 +291,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ activeModule, childre
             <Text style={styles.footerText}>© 2024</Text>
           </View>
         </View>
+
+        {/* Trợ lý ảo Hạnh AI */}
+        <AiAgentWidget />
       </View>
     </SafeAreaView>
   );
@@ -293,6 +307,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.bgInput,
     position: 'relative',
+    minHeight: isWeb ? ('100vh' as any) : '100%',
+    height: '100%',
   },
 
   // Sidebar
@@ -480,5 +496,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.white,
+    minHeight: isWeb ? ('100vh' as any) : '100%',
+    height: '100%',
   },
 });

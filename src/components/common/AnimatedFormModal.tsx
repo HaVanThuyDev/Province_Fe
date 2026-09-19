@@ -83,7 +83,7 @@ const AnimatedFormModal: React.FC<AnimatedFormModalProps> = ({
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
               >
-                {React.cloneElement(children as React.ReactElement, { onClose: handleClose })}
+                {React.cloneElement(children as React.ReactElement<any>, { onClose: handleClose })}
               </ScrollView>
             </KeyboardAvoidingView>
           </View>
@@ -97,7 +97,7 @@ export default AnimatedFormModal;
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...(StyleSheet.absoluteFill as object),
     backgroundColor: 'rgba(15, 23, 42, 0.45)', // Dimmed premium dark slate background overlay
     justifyContent: 'center',
     alignItems: 'center',
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     padding: Platform.OS === 'web' ? 24 : 12,
   },
   backdropClickable: {
-    ...StyleSheet.absoluteFillObject,
+    ...(StyleSheet.absoluteFill as object),
   },
   modalContainer: {
     width: '100%',

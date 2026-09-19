@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useRef, useEffect } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -10,6 +10,7 @@ import {
   Dimensions,
   StyleSheet,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
@@ -23,7 +24,7 @@ import AppButton from '../../../components/common/AppButton';
 import ErrorToast from '../../../components/common/ErrorToast';
 import { loginStyles as S } from '../styles/login.styles';
 
-const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
+const { width: windowWidth } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
 const isDesktop = isWeb && windowWidth >= 768;
 
@@ -44,6 +45,50 @@ const BrandIdentity = ({ isWebVersion = false }) => (
   </View>
 );
 
+/**
+ * Thanh tiến trình hiệu ứng phát sáng mượt mà chạy ngang đỉnh card khi đang đăng nhập
+ */
+const CardLoadingBar = () => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+        Animated.timing(anim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [anim]);
+
+  const translateX = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-250, 700],
+  });
+
+  return (
+    <View style={screenStyles.loadingTrack}>
+      <Animated.View
+        style={[
+          screenStyles.loadingBeam,
+          {
+            transform: [{ translateX }],
+          },
+        ]}
+      />
+    </View>
+  );
+};
+
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const {
     username, password, role, agreedToTerms,
@@ -60,7 +105,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     <View style={{ flex: 1, minHeight: isWeb ? ('100vh' as any) : '100%' }}>
       <Image 
         source={require('../../../assets/images/07b0b6f5dd3ede3a4b8a18962e91f070.jpg')} 
-        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]} 
+        style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} 
         resizeMode="cover"
       />
       <SafeAreaView style={[S.safeArea, { backgroundColor: 'transparent' }]}>
@@ -69,11 +114,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView
+            style={{ flex: 1 }}
             contentContainerStyle={[S.scrollContent, { backgroundColor: 'transparent' }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
             <View style={S.card}>
+              {/* Hiệu ứng loading chạy mượt mà trên đỉnh card khi đăng nhập */}
+              {isLoading && <CardLoadingBar />}
+
               <View style={S.leftPanel}>
                 <View style={S.leftPanelTop}>
                   <BrandIdentity />
@@ -125,6 +174,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                       label="VÀO HỆ THỐNG"
                       onPress={handleSubmit}
                       loading={isLoading}
+                      loadingText="Đang xác thực hệ thống..."
                       style={[S.submitBtn, { flex: 1 }]}
                       rightIcon={<Text style={{ color: '#fff', fontSize: 16 }}>→</Text>}
                     />
@@ -132,6 +182,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                       style={S.faceIdBtn}
                       onPress={() => setShowFaceIdModal(true)}
                       activeOpacity={0.8}
+                      disabled={isLoading}
                     >
                       <MaterialCommunityIcons
                         name="face-recognition"
@@ -145,6 +196,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                     label="VÀO HỆ THỐNG"
                     onPress={handleSubmit}
                     loading={isLoading}
+                    loadingText="Đang xác thực hệ thống..."
                     style={S.submitBtn}
                     rightIcon={<Text style={{ color: '#fff', fontSize: 16 }}>→</Text>}
                   />
@@ -164,14 +216,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       </SafeAreaView>
 
       <SecurityModal visible={showModal} onClose={handleModalClose} />
-      <FaceIDModal
-        visible={showFaceIdModal}
-        onClose={() => setShowFaceIdModal(false)}
-        onAuthSuccess={() => {
-          setShowFaceIdModal(false);
-          handleFaceIdLogin();
-        }}
-      />
+      {showFaceIdModal && (
+        <FaceIDModal
+          visible={showFaceIdModal}
+          onClose={() => setShowFaceIdModal(false)}
+          onAuthSuccess={() => {
+            setShowFaceIdModal(false);
+            handleFaceIdLogin();
+          }}
+        />
+      )}
 
       {/* Toast lỗi đăng nhập – hiện phía trên màn hình */}
       <ErrorToast
@@ -188,5 +242,29 @@ const SupportItem = ({ icon, text }: { icon: string; text: string }) => (
     <Text style={S.supportText}>{text}</Text>
   </View>
 );
+
+const screenStyles = StyleSheet.create({
+  loadingTrack: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3.5,
+    backgroundColor: 'rgba(218, 37, 29, 0.15)',
+    overflow: 'hidden',
+    zIndex: 999,
+  },
+  loadingBeam: {
+    width: '45%',
+    height: '100%',
+    backgroundColor: Colors.accent, // Màu vàng sao cờ nổi bật
+    borderRadius: 2,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+});
 
 export default memo(LoginScreen);

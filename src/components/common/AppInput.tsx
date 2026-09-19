@@ -54,11 +54,18 @@ const AppInput: React.FC<AppInputProps> = ({
 
         <TextInput
           ref={inputRef}
-          style={[styles.input, Platform.OS === 'web' && { outline: 'none' } as any]}
+          style={[
+            styles.input,
+            Platform.OS === 'web' && ({
+              outline: 'none',
+              backgroundColor: 'transparent',
+            } as any),
+          ]}
           placeholderTextColor={Colors.textMuted}
           secureTextEntry={isSecure}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          autoComplete={rest.autoComplete ?? 'off'}
           {...rest}
         />
 
@@ -130,6 +137,7 @@ const styles = StyleSheet.create({
     fontFamily     : 'BeVietnamPro-Regular',
     color          : Colors.textPrimary,
     paddingVertical: 0,
+    backgroundColor: 'transparent',
   },
   rightIcon: {
     marginLeft: 8,

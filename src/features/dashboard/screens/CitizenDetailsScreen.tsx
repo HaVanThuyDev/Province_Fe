@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,46 @@ import {
   Platform,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { Colors } from '../../../theme/colors';
+import { selectAccessToken } from '../../../store/auth/authSlice';
+import {
+  DEFAULT_CITIZEN_DATA,
+  CitizenDetailResponse,
+  getCitizenDetailApi,
+} from '../services/citizen.service';
+
+const DetailEditIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = '#ea580c' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 20h9"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M15 5l3 3"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
 
 // Types for detailed profiles
 interface FamilyMember {
@@ -386,13 +421,191 @@ const CitizenDetailsScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'personal' | 'identity' | 'residency' | 'household' | 'occupation' | 'documents' | 'specialGroup' | 'history'>('personal');
 
   // Extract navigation parameters
-  const { citizenCode, defaultName } = route.params || {};
+  const { id, citizenCode, defaultName } = route.params || {};
+  const accessToken = useSelector(selectAccessToken);
 
-  // Retrieve citizen profile from database (fallback to Tran Van Hoang CD-123984 with overrides if not found)
+  const [detailData, setDetailData] = useState<CitizenDetailResponse | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false);
+
+  useEffect(() => {
+    const target = id || citizenCode;
+    if (target) {
+      setIsLoadingDetail(true);
+      getCitizenDetailApi(target, accessToken || undefined, defaultName)
+        .then((res) => {
+          if (res) {
+            setDetailData(res);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setIsLoadingDetail(false));
+    }
+  }, [id, citizenCode, defaultName, accessToken]);
+
+  // Retrieve citizen profile from database (fallback to detailData or Tran Van Hoang CD-123984)
   const profile = useMemo<CitizenProfile>(() => {
+    if (detailData) {
+      const birthYear = detailData.dateOfBirth
+        ? parseInt(detailData.dateOfBirth.slice(0, 4), 10)
+        : (2026 - (detailData.age || 30));
+      const gender = detailData.genderLabel === 'Male' ? 'Nam' : detailData.genderLabel === 'Female' ? 'Nữ' : 'Khác';
+      const formattedDob = detailData.dateOfBirth ? detailData.dateOfBirth.split('-').reverse().join('/') : '';
+      const isResident = detailData.citizenType === 'Thường trú';
+
+      return {
+        code: detailData.citizenCode,
+        name: detailData.fullName,
+        gender,
+        birthYear,
+        cccd: detailData.idCardNumber,
+        job: detailData.occupation || 'Chưa cập nhật',
+        tag: detailData.citizenType || 'Thường trú',
+        tagColor: isResident ? Colors.primary : '#d97706',
+        avatarColor: gender === 'Nam' ? '#3b82f6' : gender === 'Nữ' ? '#ec4899' : '#8b5cf6',
+        personal: {
+          dob: formattedDob,
+          birthPlace: detailData.placeOfBirth || detailData.permanentAddress,
+          hometown: detailData.permanentAddress,
+          nationality: detailData.nationality || 'Việt Nam',
+          ethnicity: detailData.ethnicity || 'Kinh',
+          religion: detailData.religion || 'Không',
+          bloodType: 'O+',
+          phone: detailData.phoneNumber || '0912 345 678',
+          email: detailData.email || `${detailData.citizenCode.toLowerCase()}@civilpro.gov.vn`,
+          maritalStatus: (detailData.age || 30) >= 30 ? 'Đã kết hôn' : 'Độc thân',
+          contactAddress: detailData.permanentAddress,
+        },
+        identity: {
+          cccdNum: detailData.idCardNumber,
+          issueDate: detailData.idCardIssuedDate ? detailData.idCardIssuedDate.split('-').reverse().join('/') : '25/12/2021',
+          issuePlace: detailData.idCardIssuedPlace || 'Cục Cảnh sát QLHC về trật tự xã hội',
+          identMark: 'Nốt ruồi cách 2cm dưới đuôi mắt phải',
+          oldId: detailData.passportNumber ? `Hộ chiếu: ${detailData.passportNumber}` : 'Không có',
+        },
+        residency: {
+          permanent: detailData.permanentAddress,
+          temporary: detailData.temporaryAddress || (isResident ? 'Không có (Đang cư trú tại thường trú)' : detailData.permanentAddress),
+          current: detailData.permanentAddress,
+          regDate: formattedDob,
+          status: `${detailData.citizenType || 'Thường trú'} (${detailData.statusLabel || 'Active'})`,
+        },
+        household: {
+          hkCode: detailData.householdId ? `HK-${detailData.householdId}` : `HK-${detailData.citizenCode.replace('CD', '')}`,
+          ownerName: detailData.fullName,
+          relationToOwner: detailData.isHouseholdHead ? 'Chủ hộ' : 'Thành viên',
+          address: detailData.permanentAddress,
+          members: [
+            { name: detailData.fullName, relation: detailData.isHouseholdHead ? 'Chủ hộ' : 'Bản thân', birthYear, idCode: detailData.citizenCode },
+          ],
+        },
+        occupation: {
+          jobTitle: detailData.occupation || 'Chưa cập nhật',
+          workplace: detailData.workplace || 'Đơn vị công tác chuyên môn',
+          education: detailData.educationLevel || 'Đại học',
+          employmentStatus: 'Đang làm việc',
+        },
+        documents: {
+          birthCertificate: `Số 120/KS, Đăng ký ngày ${formattedDob} tại UBND Xã/Phường`,
+          passport: detailData.passportNumber ? `${detailData.passportNumber} (Hạn: ${detailData.passportExpiryDate || '---'})` : 'Không có',
+          driverLicense: 'Hạng B2',
+          healthInsurance: `GD4${detailData.idCardNumber.slice(0, 10)}, Nơi KCB: Bệnh viện Đa khoa`,
+        },
+        specialGroup: {
+          category: detailData.citizenType || 'Thường trú',
+          subsidy: 'Không có',
+          disability: 'Bình thường',
+        },
+        history: [
+          { date: detailData.createdAt ? detailData.createdAt.split(' ')[0] : '25/12/2021', title: 'Tạo hồ sơ công dân', desc: `Tạo bởi: ${detailData.createdBy || 'Hệ thống'} • Trạng thái: ${detailData.statusLabel || 'Active'}` },
+          { date: detailData.updatedAt ? detailData.updatedAt.split(' ')[0] : formattedDob || '01/01/1990', title: 'Cập nhật thông tin gần nhất', desc: `Cập nhật bởi: ${detailData.updatedBy || 'Cán bộ'} • ${detailData.statusReason || 'Hoạt động bình thường'}` },
+        ],
+      };
+    }
+
     if (citizenCode && PROFILES_DB[citizenCode]) {
       return PROFILES_DB[citizenCode];
     }
+
+    const matched = DEFAULT_CITIZEN_DATA.items.find(
+      c => c.citizenCode === citizenCode || (defaultName && c.fullName === defaultName)
+    );
+
+    if (matched) {
+      const birthYear = matched.dateOfBirth ? parseInt(matched.dateOfBirth.slice(0, 4), 10) : (2026 - matched.age);
+      const gender = matched.genderLabel === 'Male' ? 'Nam' : matched.genderLabel === 'Female' ? 'Nữ' : 'Khác';
+      const formattedDob = matched.dateOfBirth ? matched.dateOfBirth.split('-').reverse().join('/') : '';
+      const isResident = matched.citizenType === 'Thường trú';
+
+      return {
+        code: matched.citizenCode,
+        name: matched.fullName,
+        gender,
+        birthYear,
+        cccd: matched.idCardNumber,
+        job: matched.occupation,
+        tag: matched.citizenType,
+        tagColor: isResident ? Colors.primary : '#d97706',
+        avatarColor: gender === 'Nam' ? '#3b82f6' : gender === 'Nữ' ? '#ec4899' : '#8b5cf6',
+        personal: {
+          dob: formattedDob,
+          birthPlace: matched.permanentAddress,
+          hometown: matched.permanentAddress,
+          nationality: 'Việt Nam',
+          ethnicity: 'Kinh',
+          religion: 'Không',
+          bloodType: 'O+',
+          phone: '0912 345 678',
+          email: `${matched.citizenCode.toLowerCase()}@civilpro.gov.vn`,
+          maritalStatus: matched.age >= 30 ? 'Đã kết hôn' : 'Độc thân',
+          contactAddress: matched.permanentAddress,
+        },
+        identity: {
+          cccdNum: matched.idCardNumber,
+          issueDate: '25/12/2021',
+          issuePlace: 'Cục Cảnh sát QLHC về trật tự xã hội',
+          identMark: 'Nốt ruồi cách 2cm dưới đuôi mắt phải',
+          oldId: 'Không có',
+        },
+        residency: {
+          permanent: matched.permanentAddress,
+          temporary: isResident ? 'Không có (Đang cư trú tại thường trú)' : matched.permanentAddress,
+          current: matched.permanentAddress,
+          regDate: formattedDob,
+          status: `${matched.citizenType} (${matched.statusLabel || 'Active'})`,
+        },
+        household: {
+          hkCode: `HK-${matched.citizenCode.replace('CD', '')}`,
+          ownerName: matched.fullName,
+          relationToOwner: 'Chủ hộ',
+          address: matched.permanentAddress,
+          members: [
+            { name: matched.fullName, relation: 'Bản thân (Chủ hộ)', birthYear, idCode: matched.citizenCode },
+          ],
+        },
+        occupation: {
+          jobTitle: matched.occupation,
+          workplace: 'Đơn vị công tác địa phương',
+          education: matched.occupation.includes('Kỹ sư') || matched.occupation.includes('Bác sĩ') || matched.occupation.includes('Giáo viên') ? 'Đại học' : 'Trung cấp / Phổ thông',
+          employmentStatus: 'Đang làm việc',
+        },
+        documents: {
+          birthCertificate: `Số 120/KS, Đăng ký ngày ${formattedDob} tại UBND Xã/Phường`,
+          passport: 'Không có',
+          driverLicense: 'Hạng B2',
+          healthInsurance: `GD4${matched.idCardNumber.slice(0, 10)}, Nơi KCB: Bệnh viện Đa khoa`,
+        },
+        specialGroup: {
+          category: matched.citizenType,
+          subsidy: 'Không có',
+          disability: 'Bình thường',
+        },
+        history: [
+          { date: '25/12/2021', title: 'Cấp thẻ CCCD gắn chip', desc: 'Đã hoàn thành cấp đổi chip định danh.' },
+          { date: formattedDob || '01/01/1990', title: 'Đăng ký cư trú', desc: `Đăng ký ${matched.citizenType.toLowerCase()} tại địa chỉ hiện tại.` },
+        ],
+      };
+    }
+
     // Deep fallback matching the schema
     return {
       code: citizenCode || 'CD-123984',
@@ -504,21 +717,45 @@ const CitizenDetailsScreen: React.FC = () => {
   };
 
   const handleEdit = () => {
-    alert(`Tính năng Chỉnh sửa thông tin hồ sơ cho công dân ${profile.name} đang được chuẩn bị.`);
+    navigation.navigate('EditCitizen', {
+      citizen: detailData || {
+        id: id || 1,
+        citizenCode: profile.code,
+        fullName: profile.name,
+        genderLabel: profile.gender === 'Nam' ? 'Male' : profile.gender === 'Nữ' ? 'Female' : 'Other',
+        dateOfBirth: profile.personal.dob ? profile.personal.dob.split('/').reverse().join('-') : '1990-01-01',
+        age: 2026 - profile.birthYear,
+        idCardNumber: profile.cccd,
+        permanentAddress: profile.residency.permanent,
+        occupation: profile.occupation.jobTitle,
+        citizenType: profile.tag,
+        status: 1,
+        statusLabel: 'Active',
+      },
+    });
   };
 
   return (
     <DashboardLayout activeModule="citizens" customTitle={`HỒ SƠ CÔNG DÂN • ${profile.name.toUpperCase()}`}>
       <View style={styles.container}>
-        {/* Navigation Back Button */}
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.navigate('Citizens')}
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={18} color={Colors.textSecondary} />
-          <Text style={styles.backBtnText}>Quay lại danh sách</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Navigation Back Button */}
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.navigate('Citizens')}
+            activeOpacity={0.7}
+          >
+            <Feather name="arrow-left" size={18} color={Colors.textSecondary} />
+            <Text style={styles.backBtnText}>Quay lại danh sách</Text>
+          </TouchableOpacity>
+
+          {isLoadingDetail && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#bae6fd' }}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={{ fontSize: 13, color: Colors.primary, fontFamily: 'BeVietnamPro-Medium' }}>Đang tải dữ liệu từ máy chủ...</Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.profileGrid}>
           {/* ========================================== */}
@@ -564,7 +801,7 @@ const CitizenDetailsScreen: React.FC = () => {
                 <Text style={styles.printBtnText}>Xuất / In Hồ sơ (PDF)</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.editProfileBtn} onPress={handleEdit} activeOpacity={0.8}>
-                <Feather name="edit-2" size={16} color={Colors.primary} />
+                <DetailEditIcon size={17} color="#ea580c" />
                 <Text style={styles.editBtnText}>Chỉnh sửa thông tin</Text>
               </TouchableOpacity>
             </View>
@@ -918,17 +1155,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: '#fff7ed',
+    borderWidth: 1.5,
+    borderColor: '#fed7aa',
     paddingVertical: 12,
     borderRadius: 12,
     width: '100%',
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.18s ease-in-out',
+      } as any,
+    }),
   },
   editBtnText: {
     fontSize: 14,
-    fontFamily: 'BeVietnamPro-SemiBold',
-    color: Colors.primary,
+    fontFamily: 'BeVietnamPro-Bold',
+    color: '#ea580c',
   },
   cvFooter: {
     marginTop: 24,

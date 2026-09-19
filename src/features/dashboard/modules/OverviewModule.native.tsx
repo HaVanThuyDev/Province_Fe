@@ -2,18 +2,18 @@
 // OverviewModule – Dashboard Tổng Quan
 // ============================================================
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useSelector } from 'react-redux';
 import Svg, { Path, Circle, Line, Text as SvgText, G } from 'react-native-svg';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Colors } from '../../../theme/colors';
-
-const METRICS = [
-  { icon: 'users',        label: 'Tổng dân số',       value: '1,854,230', trend: '+1.2%',  trendUp: true,  color: Colors.primary },
-  { icon: 'home',         label: 'Số hộ gia đình',    value: '450,112',   trend: 'Toàn tỉnh', trendUp: null, color: '#7c3aed' },
-  { icon: 'suitcase',     label: 'Tạm trú/Tạm vắng', value: '12,450',    trend: 'Tháng này', trendUp: null, color: '#d97706' },
-  { icon: 'id-card',      label: 'Đến hạn cấp CCCD', value: '2,841',     trend: 'Khẩn cấp', trendUp: false, color: Colors.dangerIcon },
-];
+import { selectAccessToken } from '../../../store/auth/authSlice';
+import {
+  getDashboardStatsApi,
+  DEFAULT_DASHBOARD_STATS,
+  DashboardStatsResponse,
+} from '../services/statistical.service';
 
 const DISTRICTS = [
   { name: 'Huyện Hòa Bình',       code: 'HB-001', pop: '245,600', households: '61,400', density: '840 người/km²', status: 'ỔN ĐỊNH',   statusColor: '#16a34a', statusBg: '#dcfce7' },
@@ -203,26 +203,79 @@ const DonutChart = () => {
   );
 };
 
-const OverviewModule: React.FC = () => (
-  <View style={styles.container}>
+const OverviewModule: React.FC = () => {
+  const accessToken = useSelector(selectAccessToken);
+  const [stats, setStats] = useState<DashboardStatsResponse>(DEFAULT_DASHBOARD_STATS);
 
-    {/* Metric Cards */}
-    <View style={styles.metricsRow}>
-      {METRICS.map((m, i) => (
-        <View key={i} style={styles.metricCard}>
-          <View style={styles.metricTop}>
-            <View style={[styles.metricIconBox, { backgroundColor: m.color + '18' }]}>
-              <FontAwesome5 name={m.icon} size={18} color={m.color} />
+  useEffect(() => {
+    let isMounted = true;
+    getDashboardStatsApi(accessToken || undefined)
+      .then((data) => {
+        if (isMounted && data) {
+          setStats(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken]);
+
+  const metrics = [
+    {
+      icon: 'users',
+      label: 'Tổng dân số',
+      value: stats.totalPopulation.toLocaleString('vi-VN'),
+      trend: stats.growthRatePct != null ? `+${stats.growthRatePct}%` : '+1.2%',
+      trendUp: true,
+      color: Colors.primary,
+    },
+    {
+      icon: 'home',
+      label: 'Số hộ gia đình',
+      value: stats.totalHouseholds.toLocaleString('vi-VN'),
+      trend: 'Toàn tỉnh',
+      trendUp: null,
+      color: '#7c3aed',
+    },
+    {
+      icon: 'suitcase',
+      label: 'Tạm trú/Tạm vắng',
+      value: (stats.temporaryResidents ?? 12450).toLocaleString('vi-VN'),
+      trend: 'Tháng này',
+      trendUp: null,
+      color: '#d97706',
+    },
+    {
+      icon: 'id-card',
+      label: 'Đến hạn cấp CCCD',
+      value: (stats.expiringNationalIds ?? 2841).toLocaleString('vi-VN'),
+      trend: 'Khẩn cấp',
+      trendUp: false,
+      color: Colors.dangerIcon,
+    },
+  ];
+
+  return (
+    <View style={styles.container}>
+
+      {/* Metric Cards */}
+      <View style={styles.metricsRow}>
+        {metrics.map((m, i) => (
+          <View key={i} style={styles.metricCard}>
+            <View style={styles.metricTop}>
+              <View style={[styles.metricIconBox, { backgroundColor: m.color + '18' }]}>
+                <FontAwesome5 name={m.icon} size={18} color={m.color} />
+              </View>
+              <Text style={[styles.metricTrend, { color: m.trendUp === true ? '#16a34a' : m.trendUp === false ? Colors.dangerIcon : Colors.textMuted }]}>
+                {m.trendUp === true ? '↑ ' : m.trendUp === false ? '⚠ ' : ''}{m.trend}
+              </Text>
             </View>
-            <Text style={[styles.metricTrend, { color: m.trendUp === true ? '#16a34a' : m.trendUp === false ? Colors.dangerIcon : Colors.textMuted }]}>
-              {m.trendUp === true ? '↑ ' : m.trendUp === false ? '⚠ ' : ''}{m.trend}
-            </Text>
+            <Text style={styles.metricLabel}>{m.label}</Text>
+            <Text style={styles.metricValue}>{m.value}</Text>
           </View>
-          <Text style={styles.metricLabel}>{m.label}</Text>
-          <Text style={styles.metricValue}>{m.value}</Text>
-        </View>
-      ))}
-    </View>
+        ))}
+      </View>
 
     {/* Charts Section */}
     <View style={styles.chartsRow}>
@@ -274,22 +327,23 @@ const OverviewModule: React.FC = () => (
       ))}
     </View>
 
-    {/* Recent Logs */}
-    <View style={styles.tableCard}>
-      <Text style={styles.cardTitle}>Nhật ký hoạt động gần đây</Text>
-      {LOGS.map((log, i) => (
-        <View key={i} style={[styles.logItem, i > 0 && styles.logBorder]}>
-          <View style={[styles.logDot, { backgroundColor: log.color }]} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.logText}>{log.text}</Text>
-            <Text style={styles.logTime}>{log.time}</Text>
+      {/* Recent Logs */}
+      <View style={styles.tableCard}>
+        <Text style={styles.cardTitle}>Nhật ký hoạt động gần đây</Text>
+        {LOGS.map((log, i) => (
+          <View key={i} style={[styles.logItem, i > 0 && styles.logBorder]}>
+            <View style={[styles.logDot, { backgroundColor: log.color }]} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.logText}>{log.text}</Text>
+              <Text style={styles.logTime}>{log.time}</Text>
+            </View>
           </View>
-        </View>
-      ))}
-    </View>
+        ))}
+      </View>
 
-  </View>
-);
+    </View>
+  );
+};
 
 export default OverviewModule;
 

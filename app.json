@@ -3,13 +3,21 @@
     "name": "FeCudan",
     "slug": "fe-cudan",
     "version": "1.0.0",
-    "platforms": ["ios", "android", "web"],
-    "icon": "./src/assets/images/logo.png",
+    "sdkVersion": "57.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "icon": "./src/assets/images/icon.png",
     "web": {
       "bundler": "metro",
-      "favicon": "./src/assets/images/logo.png",
+      "icon": "./src/assets/images/icon.png",
       "name": "FeCudan",
       "shortName": "FeCudan"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

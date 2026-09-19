@@ -70,6 +70,7 @@ export function useLogin(onSuccess?: () => void) {
 
     set('isLoading', true);
     set('errorMessage', '');
+    const startTime = Date.now();
 
     try {
       const response = await loginApi({
@@ -78,10 +79,21 @@ export function useLogin(onSuccess?: () => void) {
         role    : state.role,
       });
 
+      // Đảm bảo thời gian loading tối thiểu 500ms để hiệu ứng chuyển cảnh mượt mà
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 500) {
+        await new Promise(resolve => setTimeout(resolve, 500 - elapsed));
+      }
+
       // Map BE response phẳng → Redux store
       dispatch(loginSuccess(response));
       onSuccess?.();
     } catch (err: any) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 500) {
+        await new Promise(resolve => setTimeout(resolve, 500 - elapsed));
+      }
+
       // Hiển thị lỗi qua Toast
       const msg = err?.message ?? 'Đăng nhập thất bại. Vui lòng thử lại.';
       set('errorMessage', msg);

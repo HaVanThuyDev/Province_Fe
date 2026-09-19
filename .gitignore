@@ -1,3 +1,14 @@
-node_modules
-node_modules
-node_modules
+node_modules/
+
+.expo/
+dist/
+web-build/
+
+.env
+.env.local
+
+.idea/
+.vscode/
+
+Thumbs.db
+.expo/

@@ -5,6 +5,7 @@
 
 import React from 'react';
 import {
+  View,
   TouchableOpacity,
   Text,
   ActivityIndicator,
@@ -22,6 +23,7 @@ interface AppButtonProps {
   onPress    : () => void;
   variant   ?: Variant;
   loading   ?: boolean;
+  loadingText?: string;
   disabled  ?: boolean;
   style     ?: StyleProp<ViewStyle>;
   textStyle ?: StyleProp<TextStyle>;
@@ -31,9 +33,10 @@ interface AppButtonProps {
 const AppButton: React.FC<AppButtonProps> = ({
   label,
   onPress,
-  variant  = 'primary',
-  loading  = false,
-  disabled = false,
+  variant     = 'primary',
+  loading     = false,
+  loadingText,
+  disabled    = false,
   style,
   textStyle,
   rightIcon,
@@ -53,10 +56,17 @@ const AppButton: React.FC<AppButtonProps> = ({
       activeOpacity={0.85}
     >
       {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? Colors.textOnPrimary : Colors.primary}
-          size="small"
-        />
+        <View style={styles.loadingRow}>
+          <ActivityIndicator
+            color={variant === 'primary' ? Colors.textOnPrimary : Colors.primary}
+            size="small"
+          />
+          {loadingText ? (
+            <Text style={[styles.label, styles[`${variant}Label`], textStyle, styles.loadingLabel]}>
+              {loadingText}
+            </Text>
+          ) : null}
+        </View>
       ) : (
         <>
           <Text style={[styles.label, styles[`${variant}Label`], textStyle]}>
@@ -121,5 +131,16 @@ const styles = StyleSheet.create({
   },
   ghostLabel: {
     color: Colors.primary,
+  },
+  loadingRow: {
+    flexDirection : 'row',
+    alignItems    : 'center',
+    justifyContent: 'center',
+    gap           : 10,
+  },
+  loadingLabel: {
+    fontSize     : 14,
+    fontWeight   : '600',
+    letterSpacing: 0.3,
   },
 } as const);

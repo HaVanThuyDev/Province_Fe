@@ -35,9 +35,9 @@ const LoginForm: React.FC<LoginFormProps> = ({
         autoCorrect={false}
         keyboardType="default"
         returnKeyType="next"
+        autoComplete="off"
         error={usernameError}
         leftIcon={<Text style={styles.inputIcon}>👤</Text>}
-        
       />
 
       <AppInput
@@ -47,6 +47,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
         onChangeText={onPasswordChange}
         secureTextEntry
         returnKeyType="done"
+        autoComplete="off"
         error={passwordError}
         leftIcon={<Text style={styles.inputIcon}>🔒</Text>}
         rightAction={

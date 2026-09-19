@@ -101,14 +101,14 @@ const FaceIDModal: React.FC<FaceIDModalProps> = ({ visible, onClose, onAuthSucce
               <View style={[styles.scannerInner, success && styles.scannerSuccess]}>
                 {permission?.granted ? (
                   <CameraView
-                    style={StyleSheet.absoluteFillObject}
+                    style={StyleSheet.absoluteFill}
                     facing="front"
                   />
                 ) : null}
 
                 {/* Dark overlay when scanning is active over camera */}
                 {permission?.granted && !success && (
-                  <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(15, 23, 42, 0.15)', zIndex: 1 }]} />
+                  <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(15, 23, 42, 0.15)', zIndex: 1 }]} />
                 )}
 
                 <MaterialCommunityIcons

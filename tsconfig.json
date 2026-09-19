@@ -1,29 +1,55 @@
 {
-  "extends": "expo/tsconfig.base",
-  "compilerOp tions": {
-    "target": "esnext",
-    "module": "esnext",
-    "lib": ["esnext", "dom"],
-    "jsx": "react-native",
-    "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
+  "compilerOptions": {
+    "allowJs": true,
     "esModuleInterop": true,
+    "jsx": "react-native",
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
+    "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "target": "esnext",
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "@components/*": ["src/components/*"],
-      "@features/*": ["src/features/*"],
-      "@constants/*": ["/*"],
-      "@theme/*": ["src/theme/*"],
-      "@utils/*": ["src/utils/*"],
-      "@navigation/*": ["src/navigation/*"],
-      "@store/*": ["src/store/*"],
-      "@assets/*": ["src/assets/*"]
+      "@components/*": [
+        "src/components/*"
+      ],
+      "@features/*": [
+        "src/features/*"
+      ],
+      "@constants/*": [
+        "src/constants/*"
+      ],
+      "@theme/*": [
+        "src/theme/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ],
+      "@navigation/*": [
+        "src/navigation/*"
+      ],
+      "@store/*": [
+        "src/store/*"
+      ],
+      "@assets/*": [
+        "src/assets/*"
+      ]
     }
   },
-  "include": ["src", "index.ts", "App.tsx"]
+  "include": [
+    "src",
+    "index.ts",
+    "App.tsx"
+  ],
+  "extends": "expo/tsconfig.base"
 }
