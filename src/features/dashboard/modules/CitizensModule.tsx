@@ -27,7 +27,8 @@ import {
   CitizenItem,
   CitizenSummaryResponse,
   CitizenPageResponse,
-  DEFAULT_CITIZEN_DATA,
+  EMPTY_CITIZEN_PAGE,
+  getCitizensApi,
   searchCitizensApi,
 } from '../services/citizen.service';
 
@@ -105,7 +106,7 @@ const CitizensModule: React.FC = () => {
   const navigation = useNavigation<any>();
   const accessToken = useSelector(selectAccessToken);
 
-  const [citizenData, setCitizenData] = useState<CitizenPageResponse>(DEFAULT_CITIZEN_DATA);
+  const [citizenData, setCitizenData] = useState<CitizenPageResponse>(EMPTY_CITIZEN_PAGE);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [pageSize] = useState<number>(10);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -173,20 +174,19 @@ const CitizensModule: React.FC = () => {
     );
   };
 
-  // Đếm số lượng thực tế
+  // Đếm số lượng thực tế từ API response
   const typeCounts = {
-    all: DEFAULT_CITIZEN_DATA.totalElements,
-    thuongTru: DEFAULT_CITIZEN_DATA.items.filter((c) => c.citizenType === 'Thường trú').length,
-    tamTru: DEFAULT_CITIZEN_DATA.items.filter((c) => c.citizenType === 'Tạm trú').length,
+    all: citizenData.totalElements,
+    thuongTru: citizenData.items.filter((c) => c.citizenType === 'Thường trú').length,
+    tamTru: citizenData.items.filter((c) => c.citizenType === 'Tạm trú').length,
   };
 
-  // Hàm thực thi tìm kiếm & lọc với hoạt họa mượt mà (GPU accelerated cross-fade, zero hitching)
+  // Hàm thực thi tìm kiếm & lọc từ API thật
   const executeSearch = useCallback(
     async (pageIndex: number, keyword: string, typeFilter: CitizenTypeFilter) => {
       const currentRequestId = ++requestIdRef.current;
       setIsLoading(true);
 
-      // Bắt đầu làm mờ nhẹ bảng (0.55 giữ nội dung ổn định không bị giật) và hiện thanh tiến trình
       Animated.parallel([
         Animated.timing(tableFadeAnim, {
           toValue: 0.55,
@@ -206,11 +206,10 @@ const CitizensModule: React.FC = () => {
       const citizenTypeParam = typeFilter !== 'Tất cả' ? typeFilter : undefined;
       const minTimer = new Promise((resolve) => setTimeout(resolve, 180));
 
-      let apiSuccess = false;
-      let newResult: CitizenPageResponse | null = null;
+      let newResult: CitizenPageResponse = EMPTY_CITIZEN_PAGE;
 
       try {
-        const res = await searchCitizensApi(
+        let res = await searchCitizensApi(
           {
             keyword: q || undefined,
             fullName: q || undefined,
@@ -224,47 +223,19 @@ const CitizensModule: React.FC = () => {
           accessToken || undefined,
         );
 
-        if (res && Array.isArray(res.items) && res.items.length > 0) {
-          await minTimer;
-          if (currentRequestId === requestIdRef.current) {
-            newResult = res;
-            apiSuccess = true;
-          }
+        if (!res || !Array.isArray(res.items) || res.items.length === 0) {
+          res = await getCitizensApi(accessToken || undefined, pageIndex, pageSize);
         }
-      } catch {
-        // Fallback sang lọc cục bộ không dấu
-      }
-
-      if (currentRequestId !== requestIdRef.current) {
-        return; // Đã có request mới hơn, bỏ qua request cũ tránh giật dữ liệu
-      }
-
-      if (!apiSuccess) {
-        let filtered = DEFAULT_CITIZEN_DATA.items;
-
-        if (q) {
-          filtered = filtered.filter((c) => matchesQuery(c, q));
-        }
-
-        if (citizenTypeParam) {
-          filtered = filtered.filter((c) => c.citizenType === citizenTypeParam);
-        }
-
-        const totalElements = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
-        const validPage = Math.min(pageIndex, Math.max(0, totalPages - 1));
-        const pagedItems = filtered.slice(validPage * pageSize, (validPage + 1) * pageSize);
 
         await minTimer;
-        if (currentRequestId !== requestIdRef.current) return;
-
-        newResult = {
-          items: pagedItems,
-          totalElements,
-          totalPages,
-          page: validPage,
-          size: pageSize,
-        };
+        if (currentRequestId === requestIdRef.current) {
+          newResult = res || EMPTY_CITIZEN_PAGE;
+        }
+      } catch {
+        await minTimer;
+        if (currentRequestId === requestIdRef.current) {
+          newResult = EMPTY_CITIZEN_PAGE;
+        }
       }
 
       if (newResult && currentRequestId === requestIdRef.current) {

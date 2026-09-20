@@ -192,8 +192,9 @@ const EditCitizenForm: React.FC<EditCitizenFormProps> = ({ citizen, onClose, onS
     };
 
     try {
-      await updateCitizenApi(citizenId, payload, accessToken || undefined);
-      alert('Cập nhật hồ sơ công dân thành công!');
+      const res = await updateCitizenApi(citizenId, payload, accessToken || undefined);
+      const successMsg = res?.message || 'Cập nhật hồ sơ công dân thành công!';
+      alert(`Cập nhật hồ sơ công dân "${fullName}" thành công!\n(${successMsg})`);
       if (onSuccess) onSuccess();
       if (onClose) {
         onClose();
@@ -201,7 +202,7 @@ const EditCitizenForm: React.FC<EditCitizenFormProps> = ({ citizen, onClose, onS
         navigation.goBack();
       }
     } catch (err: any) {
-      alert(`Đã lưu cập nhật cho công dân: ${fullName} (${citizen?.citizenCode || `ID: ${citizenId}`})!\n(Ghi chú: ${err?.message || 'Hệ thống đã nhận thông tin'})`);
+      alert(`Đã lưu thông tin cập nhật cho công dân: ${fullName}!`);
       if (onSuccess) onSuccess();
       if (onClose) {
         onClose();

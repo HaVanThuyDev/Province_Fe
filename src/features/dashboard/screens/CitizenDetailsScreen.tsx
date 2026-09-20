@@ -18,7 +18,6 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { Colors } from '../../../theme/colors';
 import { selectAccessToken } from '../../../store/auth/authSlice';
 import {
-  DEFAULT_CITIZEN_DATA,
   CitizenDetailResponse,
   getCitizenDetailApi,
 } from '../services/citizen.service';
@@ -431,7 +430,7 @@ const CitizenDetailsScreen: React.FC = () => {
     const target = id || citizenCode;
     if (target) {
       setIsLoadingDetail(true);
-      getCitizenDetailApi(target, accessToken || undefined, defaultName)
+      getCitizenDetailApi(target, accessToken || undefined)
         .then((res) => {
           if (res) {
             setDetailData(res);
@@ -524,86 +523,6 @@ const CitizenDetailsScreen: React.FC = () => {
 
     if (citizenCode && PROFILES_DB[citizenCode]) {
       return PROFILES_DB[citizenCode];
-    }
-
-    const matched = DEFAULT_CITIZEN_DATA.items.find(
-      c => c.citizenCode === citizenCode || (defaultName && c.fullName === defaultName)
-    );
-
-    if (matched) {
-      const birthYear = matched.dateOfBirth ? parseInt(matched.dateOfBirth.slice(0, 4), 10) : (2026 - matched.age);
-      const gender = matched.genderLabel === 'Male' ? 'Nam' : matched.genderLabel === 'Female' ? 'Nữ' : 'Khác';
-      const formattedDob = matched.dateOfBirth ? matched.dateOfBirth.split('-').reverse().join('/') : '';
-      const isResident = matched.citizenType === 'Thường trú';
-
-      return {
-        code: matched.citizenCode,
-        name: matched.fullName,
-        gender,
-        birthYear,
-        cccd: matched.idCardNumber,
-        job: matched.occupation,
-        tag: matched.citizenType,
-        tagColor: isResident ? Colors.primary : '#d97706',
-        avatarColor: gender === 'Nam' ? '#3b82f6' : gender === 'Nữ' ? '#ec4899' : '#8b5cf6',
-        personal: {
-          dob: formattedDob,
-          birthPlace: matched.permanentAddress,
-          hometown: matched.permanentAddress,
-          nationality: 'Việt Nam',
-          ethnicity: 'Kinh',
-          religion: 'Không',
-          bloodType: 'O+',
-          phone: '0912 345 678',
-          email: `${matched.citizenCode.toLowerCase()}@civilpro.gov.vn`,
-          maritalStatus: matched.age >= 30 ? 'Đã kết hôn' : 'Độc thân',
-          contactAddress: matched.permanentAddress,
-        },
-        identity: {
-          cccdNum: matched.idCardNumber,
-          issueDate: '25/12/2021',
-          issuePlace: 'Cục Cảnh sát QLHC về trật tự xã hội',
-          identMark: 'Nốt ruồi cách 2cm dưới đuôi mắt phải',
-          oldId: 'Không có',
-        },
-        residency: {
-          permanent: matched.permanentAddress,
-          temporary: isResident ? 'Không có (Đang cư trú tại thường trú)' : matched.permanentAddress,
-          current: matched.permanentAddress,
-          regDate: formattedDob,
-          status: `${matched.citizenType} (${matched.statusLabel || 'Active'})`,
-        },
-        household: {
-          hkCode: `HK-${matched.citizenCode.replace('CD', '')}`,
-          ownerName: matched.fullName,
-          relationToOwner: 'Chủ hộ',
-          address: matched.permanentAddress,
-          members: [
-            { name: matched.fullName, relation: 'Bản thân (Chủ hộ)', birthYear, idCode: matched.citizenCode },
-          ],
-        },
-        occupation: {
-          jobTitle: matched.occupation,
-          workplace: 'Đơn vị công tác địa phương',
-          education: matched.occupation.includes('Kỹ sư') || matched.occupation.includes('Bác sĩ') || matched.occupation.includes('Giáo viên') ? 'Đại học' : 'Trung cấp / Phổ thông',
-          employmentStatus: 'Đang làm việc',
-        },
-        documents: {
-          birthCertificate: `Số 120/KS, Đăng ký ngày ${formattedDob} tại UBND Xã/Phường`,
-          passport: 'Không có',
-          driverLicense: 'Hạng B2',
-          healthInsurance: `GD4${matched.idCardNumber.slice(0, 10)}, Nơi KCB: Bệnh viện Đa khoa`,
-        },
-        specialGroup: {
-          category: matched.citizenType,
-          subsidy: 'Không có',
-          disability: 'Bình thường',
-        },
-        history: [
-          { date: '25/12/2021', title: 'Cấp thẻ CCCD gắn chip', desc: 'Đã hoàn thành cấp đổi chip định danh.' },
-          { date: formattedDob || '01/01/1990', title: 'Đăng ký cư trú', desc: `Đăng ký ${matched.citizenType.toLowerCase()} tại địa chỉ hiện tại.` },
-        ],
-      };
     }
 
     // Deep fallback matching the schema

@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  fe-cudan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fe-cudan-app
+    ports:
+      - "8080:80"
+    restart: always
