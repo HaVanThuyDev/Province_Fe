@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
-    "build": "expo export --platform web"
+    "build": "expo export --platform web",
+    "postinstall": "node scripts/patch-metro.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
