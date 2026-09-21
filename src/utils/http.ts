@@ -48,7 +48,7 @@ function generateIdempotencyKey(): string {
 }
 
 // Tự động trích xuất token lưu trong session nếu không truyền vào
-function getStoredToken(): string | null {
+export function getStoredToken(): string | null {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const raw = window.localStorage.getItem('cudan_auth_session');
@@ -70,7 +70,7 @@ export async function request<T>(
   const {
     method = 'GET',
     body,
-    token = getStoredToken() || undefined,
+    token,
     idempotencyKey,
     timeoutMs = 12000,
     headers: customHeaders = {},
@@ -82,8 +82,10 @@ export async function request<T>(
     ...customHeaders,
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  const effectiveToken = token ?? getStoredToken() ?? undefined;
+
+  if (effectiveToken && effectiveToken !== 'demo-token') {
+    headers['Authorization'] = `Bearer ${effectiveToken}`;
   }
 
   // Tự động sinh Idempotency-Key cho các request thanh toán trừ tiền

@@ -10,7 +10,7 @@
 // Endpoint Chi tiết : GET /civil/citizen/details/{id} hoặc /civil/citizen/{id}
 // ============================================================
 
-import { request } from '../../../utils/http';
+import { request, getStoredToken } from '../../../utils/http';
 
 export interface CitizenItem {
   id: number;
@@ -336,11 +336,12 @@ export async function updateCitizenApi(
 ): Promise<any> {
   const numId = Number(id);
   const body = cleanPayload(payload);
+  const effectiveToken = token || getStoredToken() || undefined;
   try {
     return await request<any>(`/citizen/${id}`, {
       method: 'PUT',
       body,
-      token,
+      token: effectiveToken,
     });
   } catch (err: any) {
     // Tự động bắt lỗi 403 Forbidden / Lỗi phân quyền từ Server Backend để UI hoàn tất cập nhật mượt mà
