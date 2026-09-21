@@ -1,11 +1,11 @@
 // ============================================================
 // CITIZEN SERVICE & DATA
 // Quản lý API và cấu trúc dữ liệu cho phân hệ Quản lý công dân
-// Tương tác trực tiếp với API thật (Bắt lỗi 403 Forbidden & Fallback tự động)
+// Tương tác trực tiếp với API thật qua Spring Cloud Gateway (civil-pro-citizen)
 // Endpoint Danh sách: GET /civil/citizen
 // Endpoint Tìm kiếm : GET /civil/citizen/search
 // Endpoint Tạo mới  : POST /civil/citizen
-// Endpoint Cập nhật : PUT /civil/citizen/{id} hoặc PUT /civil/citizen
+// Endpoint Cập nhật : PUT /civil/citizen/{id} (@DynamicUpdate hỗ trợ partial fields)
 // Endpoint Chi tiết : GET /civil/citizen/details/{id} hoặc /civil/citizen/{id}
 // ============================================================
 
@@ -163,6 +163,17 @@ export const EMPTY_CITIZEN_PAGE: CitizenPageResponse = {
   size: 10,
 };
 
+// Utility: Loại bỏ các trường undefined, null hoặc chuỗi rỗng để tối ưu cho Hibernate @DynamicUpdate
+function cleanPayload<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const cleaned: Record<string, any> = {};
+  Object.entries(obj).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== '') {
+      cleaned[key] = val;
+    }
+  });
+  return cleaned;
+}
+
 // ── Normalizer ─────────────────────────────────────────────
 export function normalizeCitizenPageResponse(raw: any): CitizenPageResponse {
   if (!raw) return EMPTY_CITIZEN_PAGE;
@@ -298,81 +309,27 @@ export async function createCitizenApi(
   payload: CreateCitizenRequest,
   token?: string,
 ): Promise<any> {
-  try {
-    return await request<any>('/citizen', {
-      method: 'POST',
-      body: payload,
-      token,
-    });
-  } catch (err: any) {
-    try {
-      return await request<any>('/citizen/create', {
-        method: 'POST',
-        body: payload,
-        token,
-      });
-    } catch {
-      return {
-        success: true,
-        message: 'Thao tác hoàn tất',
-        data: payload,
-      };
-    }
-  }
+  const body = cleanPayload(payload);
+  return request<any>('/citizen', {
+    method: 'POST',
+    body,
+    token,
+  });
 }
 
 // ── 4. API: Cập Nhật Công Dân (PUT /civil/citizen/{id}) ─────
+// Chuẩn RESTful API: PUT /civil/citizen/{id} khớp trực tiếp với Spring Cloud Gateway
 export async function updateCitizenApi(
   id: number | string,
   payload: UpdateCitizenRequest,
   token?: string,
 ): Promise<any> {
-  const numId = Number(id);
-
-  // 1. Thử phương thức chuẩn PUT /citizen/{id}
-  try {
-    return await request<any>(`/citizen/${id}`, {
-      method: 'PUT',
-      body: payload,
-      token,
-    });
-  } catch (err: any) {
-    // 2. Thử phương thức PUT /citizen (truyền id trong body)
-    try {
-      return await request<any>('/citizen', {
-        method: 'PUT',
-        body: { id: numId, ...payload },
-        token,
-      });
-    } catch {
-      // 3. Thử phương thức POST /citizen (truyền id trong body)
-      try {
-        return await request<any>('/citizen', {
-          method: 'POST',
-          body: { id: numId, ...payload },
-          token,
-        });
-      } catch {
-        // 4. Thử phương thức PATCH /citizen/{id}
-        try {
-          return await request<any>(`/citizen/${id}`, {
-            method: 'PATCH',
-            body: payload,
-            token,
-          });
-        } catch {
-          // 5. Nếu backend vẫn từ chối (403 Forbidden do chưa cấp quyền server),
-          // tự động bắt lỗi và trả về phản hồi thành công để UI tiếp tục hoạt động mượt mà
-          return {
-            success: true,
-            status: 200,
-            message: 'Cập nhật hồ sơ công dân thành công',
-            data: { id: numId, ...payload },
-          };
-        }
-      }
-    }
-  }
+  const body = cleanPayload(payload);
+  return request<any>(`/citizen/${id}`, {
+    method: 'PUT',
+    body,
+    token,
+  });
 }
 
 // ── 5. API: Chi Tiết Công Dân (GET /civil/citizen/details/{id}) ─
@@ -391,29 +348,10 @@ export async function getCitizenDetailApi(
     }
   } catch {}
 
-  try {
-    const res = await request<any>(`/citizen/${id}`, {
-      method: 'GET',
-      token,
-    });
-    const payload = res?.data ?? res;
-    if (payload && (payload.id || payload.fullName)) {
-      return payload as CitizenDetailResponse;
-    }
-  } catch {}
-
-  return {
-    id: Number(id) || 1,
-    citizenCode: typeof id === 'string' && id.startsWith('CD') ? id : `CD${String(id).padStart(6, '0')}`,
-    fullName: 'Công dân',
-    genderLabel: 'Male',
-    dateOfBirth: '1990-01-01',
-    age: 36,
-    idCardNumber: '001090000000',
-    permanentAddress: 'Địa chỉ thường trú',
-    occupation: 'Tự do',
-    citizenType: 'Thường trú',
-    status: 1,
-    statusLabel: 'Active',
-  };
+  const res = await request<any>(`/citizen/${id}`, {
+    method: 'GET',
+    token,
+  });
+  const payload = res?.data ?? res;
+  return payload as CitizenDetailResponse;
 }
