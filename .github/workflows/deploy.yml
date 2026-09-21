@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to Vercel
 
 on:
   push:
@@ -22,10 +22,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Check Vercel Credentials & Deploy
-        if: ${{ secrets.CUDAN != '' && secrets.ORG_ID != '' && secrets.PROJECT_ID != '' }}
+      - name: Deploy to Vercel
         env:
-          VERCEL_TOKEN: ${{ secrets.CUDAN }}
-          VERCEL_ORG_ID: ${{ secrets.ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.PROJECT_ID }}
-        run: npx vercel --token=${{ secrets.CUDAN }} --prod --yes
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.CUDAN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || secrets.ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || secrets.PROJECT_ID }}
+        run: npx vercel --token=${{ secrets.VERCEL_TOKEN || secrets.CUDAN }} --prod --yes
