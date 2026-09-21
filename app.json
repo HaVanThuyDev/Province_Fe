@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Quản lý Cư dân",
-    "slug": "Resident Management",
+    "name": "CIVIL-PRO • Quản lý Cư dân",
+    "slug": "quan-ly-cu-dan",
     "version": "1.0.0",
     "sdkVersion": "57.0.0",
     "platforms": [
@@ -9,11 +9,12 @@
       "android",
       "web"
     ],
-    "icon": "./src/assets/images/icon.png",
+    "icon": "./src/assets/images/logo1.png",
     "web": {
       "bundler": "metro",
-      "icon": "./src/assets/images/icon.png",
-      "name": "Quản lý Cư dân",
+      "favicon": "./src/assets/images/logo1.png",
+      "icon": "./src/assets/images/logo1.png",
+      "name": "CIVIL-PRO • Quản lý Cư dân",
       "shortName": "Quản lý Cư dân"
     },
     "plugins": [

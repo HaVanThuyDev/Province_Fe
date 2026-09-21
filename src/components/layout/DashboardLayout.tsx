@@ -88,6 +88,32 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ activeModule, childre
   const [mounted, setMounted] = useState(isDesktop || sidebarOpen);
 
   useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const pageTitle = customTitle || MODULE_TITLES[activeModule] || 'Quản lý Cư dân';
+      document.title = `CIVIL-PRO • ${pageTitle}`;
+
+      const faviconId = 'cudan-web-favicon';
+      let link: HTMLLinkElement | null = document.getElementById(faviconId) as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = faviconId;
+        link.rel = 'icon';
+        link.type = 'image/png';
+        if (document.head) {
+          document.head.appendChild(link);
+        }
+      }
+      try {
+        const logoImg = require('../../assets/images/logo1.png');
+        const logoSrc = typeof logoImg === 'string' ? logoImg : (logoImg.default || logoImg.uri || logoImg);
+        link.href = logoSrc;
+      } catch {
+        // ignore
+      }
+    }
+  }, [activeModule, customTitle]);
+
+  useEffect(() => {
     if (isDesktop) {
       setMounted(true);
       sidebarAnim.setValue(1);

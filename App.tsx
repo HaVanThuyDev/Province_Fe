@@ -62,6 +62,27 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.title = 'CIVIL-PRO • Quản lý Cư dân';
+
+      // Tiêm Favicon Logo vào thẻ head của trình duyệt Web
+      const faviconId = 'cudan-web-favicon';
+      let link: HTMLLinkElement | null = document.getElementById(faviconId) as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = faviconId;
+        link.rel = 'icon';
+        link.type = 'image/png';
+        if (document.head) {
+          document.head.appendChild(link);
+        }
+      }
+      try {
+        const logoImg = require('./src/assets/images/logo1.png');
+        const logoSrc = typeof logoImg === 'string' ? logoImg : (logoImg.default || logoImg.uri || logoImg);
+        link.href = logoSrc;
+      } catch {
+        // Fallback
+      }
+
       const styleId = 'cudan-anti-autofill-styles';
       if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
