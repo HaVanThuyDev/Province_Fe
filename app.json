@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "FeCudan",
-    "slug": "fe-cudan",
+    "name": "Quản lý Cư dân",
+    "slug": "quan-ly-cu-dan",
     "version": "1.0.0",
     "sdkVersion": "57.0.0",
     "platforms": [
@@ -13,8 +13,8 @@
     "web": {
       "bundler": "metro",
       "icon": "./src/assets/images/icon.png",
-      "name": "FeCudan",
-      "shortName": "FeCudan"
+      "name": "Quản lý Cư dân",
+      "shortName": "Quản lý Cư dân"
     },
     "plugins": [
       "expo-font"

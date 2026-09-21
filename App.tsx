@@ -61,6 +61,7 @@ const AppContent: React.FC = () => {
   // Tiêm CSS toàn cục cho nền Web một cách an toàn bên trong useEffect khi DOM đã sẵn sàng
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.title = 'CIVIL-PRO • Quản lý Cư dân';
       const styleId = 'cudan-anti-autofill-styles';
       if (!document.getElementById(styleId)) {
         const style = document.createElement('style');

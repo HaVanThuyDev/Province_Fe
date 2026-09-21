@@ -66,9 +66,9 @@ const linking = {
   config: {
     initialRouteName: 'Login' as const,
     screens: {
-      Login: '',
-      Dashboard: 'dasbroast',
-      AdminUnits: 'administrative unit',
+      Login: 'login',
+      Dashboard: 'dashboard',
+      AdminUnits: 'administrative-unit',
       AddAdminUnit: 'administrative/add',
       Citizens: 'citizens',
       AddCitizen: 'citizens/add',
@@ -91,15 +91,20 @@ const linking = {
     const cleanPath = path.replace(/^\/+/, '').split('?')[0].trim().toLowerCase();
     const hasSession = typeof window !== 'undefined' && !!window.localStorage?.getItem('cudan_auth_session');
 
-    // Nếu đường dẫn là gốc ('/' hoặc '')
+    // Nếu không có session đăng nhập, luôn ưu tiên route Login (/login)
+    if (!hasSession) {
+      return { routes: [{ name: 'Login' }] };
+    }
+
+    // Nếu đã đăng nhập và vào trang gốc ('/' hoặc '')
     if (!cleanPath) {
-      return { routes: [{ name: hasSession ? 'Dashboard' : 'Login' }] };
+      return { routes: [{ name: 'Dashboard' }] };
     }
     // Đường dẫn login
     if (cleanPath === 'login') {
-      return { routes: [{ name: 'Login' }] };
+      return { routes: [{ name: hasSession ? 'Dashboard' : 'Login' }] };
     }
-    // Hỗ trợ cả /dashboard lẫn /dasbroast
+    // Đường dẫn dashboard
     if (cleanPath === 'dashboard' || cleanPath === 'dasbroast') {
       return { routes: [{ name: 'Dashboard' }] };
     }
