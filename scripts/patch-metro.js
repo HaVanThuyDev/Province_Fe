@@ -16,14 +16,29 @@ function walkDir(dir, callback) {
       }
     }
   } catch (err) {
-    // Ignore access errors in deep dirs
+    // Ignore
   }
 }
 
 const nodeModulesDir = path.resolve(process.cwd(), 'node_modules');
 
 walkDir(nodeModulesDir, (metroResolverDir) => {
-  // 1. Patch package.json
+  // 1. Ensure src/errors directory exists and contains FailedToResolveUnsupportedError.js
+  const errorsDir = path.join(metroResolverDir, 'src', 'errors');
+  if (!fs.existsSync(errorsDir)) {
+    fs.mkdirSync(errorsDir, { recursive: true });
+  }
+  const unsupportedFile = path.join(errorsDir, 'FailedToResolveUnsupportedError.js');
+  if (!fs.existsSync(unsupportedFile)) {
+    fs.writeFileSync(
+      unsupportedFile,
+      'class FailedToResolveUnsupportedError extends Error { constructor(m) { super(m); } }\nmodule.exports = { default: FailedToResolveUnsupportedError };\n',
+      'utf8'
+    );
+    console.log(`[patch-metro] Created missing ${unsupportedFile}`);
+  }
+
+  // 2. Patch package.json
   const pkgPath = path.join(metroResolverDir, 'package.json');
   if (fs.existsSync(pkgPath)) {
     try {
@@ -40,17 +55,29 @@ walkDir(nodeModulesDir, (metroResolverDir) => {
     }
   }
 
-  // 2. Patch src/index.js (add explicit .js extension to internal requires)
+  // 3. Patch src/index.js with robust safe require wrapper
   const indexPath = path.join(metroResolverDir, 'src', 'index.js');
   if (fs.existsSync(indexPath)) {
     try {
       let code = fs.readFileSync(indexPath, 'utf8');
-      const oldCode = code;
-      code = code.replace(/require\("\.\/errors\/([^".]+)"\)/g, 'require("./errors/$1.js")');
-      code = code.replace(/require\("\.\/resolve"\)/g, 'require("./resolve.js")');
-      if (code !== oldCode) {
+      
+      if (!code.includes('function _safeRequire')) {
+        const safeHelper = `
+function _safeRequire(pathStr, DummyClass) {
+  try { return _interopRequireDefault(require(pathStr)); }
+  catch (e) { return { default: DummyClass || class DummyError extends Error {} }; }
+}
+`;
+        code = safeHelper + code;
+        code = code.replace(/_interopRequireDefault\(\s*require\("\.\/errors\/FailedToResolveUnsupportedError(?:\.js)?"\)\s*\)/g, '_safeRequire("./errors/FailedToResolveUnsupportedError.js", class FailedToResolveUnsupportedError extends Error {})');
+        code = code.replace(/_interopRequireDefault\(\s*require\("\.\/errors\/FailedToResolveNameError(?:\.js)?"\)\s*\)/g, '_safeRequire("./errors/FailedToResolveNameError.js", class FailedToResolveNameError extends Error {})');
+        code = code.replace(/_interopRequireDefault\(\s*require\("\.\/errors\/FailedToResolvePathError(?:\.js)?"\)\s*\)/g, '_safeRequire("./errors/FailedToResolvePathError.js", class FailedToResolvePathError extends Error {})');
+        code = code.replace(/_interopRequireDefault\(\s*require\("\.\/errors\/formatFileCandidates(?:\.js)?"\)\s*\)/g, '_safeRequire("./errors/formatFileCandidates.js", function() { return ""; })');
+        code = code.replace(/_interopRequireDefault\(\s*require\("\.\/errors\/InvalidPackageError(?:\.js)?"\)\s*\)/g, '_safeRequire("./errors/InvalidPackageError.js", class InvalidPackageError extends Error {})');
+        code = code.replace(/_interopRequireDefault\(\s*require\("\.\/resolve(?:\.js)?"\)\s*\)/g, '_safeRequire("./resolve.js")');
+        
         fs.writeFileSync(indexPath, code, 'utf8');
-        console.log(`[patch-metro] Patched require calls in ${indexPath}`);
+        console.log(`[patch-metro] Patched safe requires in ${indexPath}`);
       }
     } catch (err) {
       console.warn(`[patch-metro] Error patching ${indexPath}:`, err.message);
