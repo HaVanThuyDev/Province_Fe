@@ -1,9 +1,5 @@
 import { Platform } from 'react-native';
 
-// ============================================================
-// DYNAMIC BASE URL DETERMINATION
-// Tự động nhận diện môi trường: Web localhost, Mobile LAN hoặc Emulator
-// ============================================================
 export const DEFAULT_LAN_IP = '192.168.32.103';
 
 export function getBaseUrl(): string {
@@ -82,11 +78,7 @@ export async function request<T>(
     ...customHeaders,
   };
 
-  const effectiveToken = token ?? getStoredToken() ?? undefined;
 
-  if (effectiveToken && effectiveToken !== 'demo-token') {
-    headers['Authorization'] = `Bearer ${effectiveToken}`;
-  }
 
   // Tự động sinh Idempotency-Key cho các request thanh toán trừ tiền
   if (endpoint.includes('/pay/process') || idempotencyKey) {
